@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/ShiftCal/' : '/',
   plugins: [
     vue(),
     VitePWA({
@@ -12,8 +13,8 @@ export default defineConfig({
         name: '排班日历助手 - ShiftCal',
         short_name: 'ShiftCal',
         description: '手写排班表多模态识别与 iOS 日历 (.ics) 导出工具',
-        theme_color: '#0e1322',
-        background_color: '#0e1322',
+        theme_color: '#111215',
+        background_color: '#111215',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
@@ -44,7 +45,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,ttf}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

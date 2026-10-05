@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <!-- Hidden file inputs (using dynamic function refs to prevent Vue compiler hoisting) -->
+    <!-- Hidden file inputs -->
     <input 
       :ref="(el) => { fileInputRef = el; }"
       type="file" 
@@ -9,7 +9,6 @@
       @change="handleFileChange"
     />
 
-    <!-- Hidden camera specific input for mobile -->
     <input 
       :ref="(el) => { cameraInputRef = el; }"
       type="file" 
@@ -19,125 +18,212 @@
       @change="handleFileChange"
     />
 
-    <!-- Image Upload Area -->
+    <!-- Empty State: Authentic ZZZ Retro Cassette Tape Bay (实体复古磁带插槽) -->
     <div 
       v-if="!imagePreview"
       @dragover.prevent="isDragging = true"
       @dragleave.prevent="isDragging = false"
       @drop.prevent="handleDrop"
       :class="[
-        'relative border-2 border-dashed rounded-3xl p-6 sm:p-10 text-center transition-all duration-300 group cursor-pointer flex flex-col items-center justify-center min-h-[260px]',
+        'relative rounded-3xl p-4 sm:p-8 text-center transition-all duration-200 group cursor-pointer flex flex-col items-center justify-center min-h-[360px] overflow-hidden select-none zzz-slot',
         isDragging 
-          ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01]' 
-          : 'border-slate-700/80 hover:border-indigo-500/60 bg-slate-900/30 hover:bg-slate-900/50'
+          ? 'border-[#E8F624] ring-4 ring-[#E8F624]/20 scale-[1.01]' 
+          : 'hover:border-[#3A3E48]'
       ]"
       @click="triggerFileInput"
     >
-      <!-- Glow Ambient Effect -->
-      <div class="absolute -top-12 -left-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-500"></div>
+      <!-- Top Industrial Caution Strip -->
+      <div class="absolute top-0 inset-x-6 sm:inset-x-12 h-1 zzz-hazard-stripe opacity-70"></div>
 
-      <!-- Icon & Upload Prompts -->
-      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600/30 to-purple-600/30 border border-indigo-400/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-indigo-500/10">
-        <Camera class="w-8 h-8" />
+      <!-- ========================================================
+           AUTHENTIC RETRO CASSETTE TAPE SKEUOMORPHIC CHASSIS 
+           ======================================================== -->
+      <div class="relative w-full max-w-[340px] sm:max-w-[400px] zzz-cassette-body p-3 sm:p-4 mb-4 transform group-hover:translate-y-[-2px] transition-transform duration-300 border-2 border-black shadow-[0_6px_0_#000]">
+        <!-- Classic Cassette Label Sticker -->
+        <div class="rounded-xl bg-[#232730] border-2 border-black p-2.5 sm:p-3 relative overflow-hidden shadow-inner">
+          <!-- Top Label Header Bar (Acid Yellow Street Accent) -->
+          <div class="flex items-center justify-between pb-1.5 border-b border-[#353A45]">
+            <div class="flex items-center gap-1.5">
+              <!-- Side A Emblem -->
+              <span class="w-5 h-5 rounded-md bg-[#E8F624] text-black font-tech font-bold text-[11px] flex items-center justify-center border border-black">
+                A
+              </span>
+              <span class="text-[9px] font-tech text-white font-bold tracking-wider">SHIFTCAL CASSETTE</span>
+            </div>
+            <span class="text-[9px] font-tech text-[#E8F624] font-bold">NORMAL BIAS · 120μs</span>
+          </div>
+
+          <!-- Handwritten / Title Track Area -->
+          <div class="my-2 px-2.5 py-1 bg-[#181A1E] rounded-md border border-[#2E333D] flex items-center justify-between">
+            <span class="text-[10px] font-tech text-[#D1D5DB] font-bold truncate">
+              REC // SCHEDULE_DATA_2026.ICS
+            </span>
+            <span class="text-[9px] font-tech text-[#9CA3AF]">60 MIN</span>
+          </div>
+
+          <!-- Transparent Center Window with Dual Sprocket Gears (磁带透视窗与双齿轮) -->
+          <div class="relative py-2.5 px-4 rounded-xl bg-[#111215] border-2 border-[#181A1D] flex items-center justify-between overflow-hidden shadow-[inset_0_2px_6px_rgba(0,0,0,0.9)]">
+            <!-- Left Spool Reel with Magnetic Tape Roll -->
+            <div class="zzz-cassette-sprocket shrink-0">
+              <div class="zzz-cassette-teeth"></div>
+            </div>
+
+            <!-- Center Window Meter Ruler -->
+            <div class="flex-1 mx-2 text-center pointer-events-none">
+              <!-- Tape Ribbon Line running across -->
+              <div class="w-full h-1 bg-[#3A2216] rounded-full my-1 border-t border-b border-black"></div>
+              <div class="text-[8px] font-tech text-[#9CA3AF] tracking-widest flex justify-between px-2">
+                <span>100</span>
+                <span>50</span>
+                <span>0</span>
+              </div>
+            </div>
+
+            <!-- Right Spool Reel -->
+            <div class="zzz-cassette-sprocket shrink-0">
+              <div class="zzz-cassette-teeth"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Tape Head Trapezoid & Guide Holes (磁带读写头与定位导孔) -->
+          <div class="mt-2 pt-1 flex items-center justify-between px-4">
+            <div class="zzz-tape-guide-hole"></div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-1.5 h-1.5 rounded-full bg-[#E8F624]"></div>
+              <span class="text-[8px] font-tech text-[#9CA3AF] uppercase tracking-wider">MAGNETIC ROM DRIVE</span>
+            </div>
+            <div class="zzz-tape-guide-hole"></div>
+          </div>
+        </div>
       </div>
 
-      <h3 class="text-base sm:text-lg font-bold text-white mb-1.5">
-        上传或拍照手写排班表
-      </h3>
-      <p class="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto mb-6">
-        拖拽排班照片到这里，或点击选择相册照片
-      </p>
+      <!-- Action Prompt Title -->
+      <div class="mb-4 px-2">
+        <h3 class="text-sm sm:text-base font-normal text-white uppercase tracking-tight font-unbounded">
+          <span>装填排班表图像</span> <span class="text-[#E8F624] font-tech text-xs tracking-normal font-bold">// INSERT TAPE</span>
+        </h3>
+        <p class="text-xs text-[#9CA3AF] font-tech max-w-sm mx-auto mt-1">
+          支持拖拽排班表入仓，或轻触下方按键拍照 / 选图
+        </p>
+      </div>
 
-      <!-- Fast Actions -->
-      <div class="flex flex-wrap items-center justify-center gap-3" @click.stop>
+      <!-- Responsive Mobile-Friendly Action Buttons (移动端防换行，自适应弹性按键) -->
+      <div 
+        class="w-full max-w-xs sm:max-w-sm mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2.5 px-2"
+        @click.stop
+      >
         <button
           type="button"
           @click="triggerCameraInput"
-          class="px-5 py-2.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition active:scale-95"
+          class="w-full py-2.5 sm:py-3 px-4 rounded-xl sm:rounded-2xl zzz-btn-yellow text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Camera class="w-4 h-4" />
-          <span>手机相机拍照</span>
+          <Camera class="w-4 h-4 stroke-[2.2] shrink-0" />
+          <span>手机拍照 // CAM</span>
         </button>
 
         <button
           type="button"
           @click="triggerFileInput"
-          class="px-5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-2 transition active:scale-95"
+          class="w-full py-2.5 sm:py-3 px-4 rounded-xl sm:rounded-2xl zzz-btn-dark text-xs font-bold flex items-center justify-center gap-2 text-white cursor-pointer"
         >
-          <ImagePlus class="w-4 h-4 text-slate-400" />
-          <span>相册文件选择</span>
+          <ImagePlus class="w-4 h-4 text-[#E8F624] shrink-0" />
+          <span>相册导入 // FILE</span>
         </button>
+      </div>
+
+      <!-- Bottom Serial Decal -->
+      <div class="mt-4 text-[9px] font-tech text-[#9CA3AF] uppercase tracking-widest">
+        CASSETTE ROM ICS // TYPE IV METAL 120μs
       </div>
     </div>
 
-    <!-- Preview & Parsing State -->
+    <!-- Loaded State: Inserted Cassette Deck (已装填卡带控制台) -->
     <div v-else class="space-y-4">
-      <div class="relative rounded-2xl overflow-hidden border border-white/10 bg-slate-900/60 p-4">
-        <div class="flex flex-col md:flex-row gap-5 items-start">
-          <!-- Thumbnail with Zoom preview -->
-          <div class="relative w-full md:w-64 h-64 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-slate-950 group">
+      <div class="relative rounded-3xl zzz-panel p-4 sm:p-6 shadow-[0_6px_0_#000000] border-[2.5px] border-black">
+        <div class="flex flex-col md:flex-row gap-5 sm:gap-6 items-start">
+          <!-- Cassette Cartridge Preview (卡带实体外壳结构) -->
+          <div class="relative w-full md:w-64 h-60 sm:h-64 shrink-0 rounded-2xl overflow-hidden border-[2.5px] border-black bg-[#111215] group shadow-inner">
             <img 
               :src="imagePreview" 
-              alt="Schedule preview" 
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              alt="Schedule cassette preview" 
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            
+            <!-- Top Cassette Tape Label Overlay -->
+            <div class="absolute top-0 inset-x-0 bg-[#E8F624] text-black px-2.5 py-1 text-[10px] font-tech font-bold flex items-center justify-between border-b-2 border-black">
+              <span>[REC TAPE // SIDE-A]</span>
+              <span>{{ imageSizeText || 'IMG' }}</span>
+            </div>
+
+            <!-- Hover Action Overlay -->
+            <div class="absolute inset-0 bg-[#111215]/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <button 
                 type="button"
                 @click="openFullScreen"
-                class="p-2 rounded-lg bg-black/60 text-white hover:bg-black/90 text-xs flex items-center gap-1"
+                class="px-3 py-1.5 rounded-xl zzz-btn-dark text-xs font-bold text-white flex items-center gap-1.5"
               >
-                <Maximize2 class="w-4 h-4" />
+                <Maximize2 class="w-3.5 h-3.5 text-[#E8F624]" />
                 查看大图
               </button>
             </div>
+
+            <!-- Eject Button: High-Contrast Red-Black Capsule (纯红黑底胶囊按键) -->
             <button
               type="button"
               @click="clearImage"
               :disabled="isParsing"
-              class="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-900/80 hover:bg-rose-600 text-white transition disabled:opacity-50"
-              title="重选图片"
+              class="absolute bottom-2 right-2 px-3 py-1.5 rounded-xl zzz-btn-close text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              title="退出演示磁带"
             >
-              <Trash2 class="w-4 h-4" />
+              <Trash2 class="w-3.5 h-3.5 stroke-[2.2]" />
+              <span>EJECT</span>
             </button>
           </div>
 
-          <!-- Controls & Config -->
+          <!-- Right Hardware Console Control Panel -->
           <div class="flex-1 w-full space-y-4">
-            <div>
+            <!-- Deck Status Header -->
+            <div class="pb-3 border-b-2 border-[#181A1D]">
               <div class="flex items-center justify-between gap-2">
-                <h4 class="text-sm font-bold text-white flex items-center gap-2 shrink-0">
-                  <ScanText class="w-4 h-4 text-indigo-400" />
-                  <span>已就绪排班图像</span>
-                </h4>
-                <span v-if="imageSizeText" class="text-xs text-slate-400 font-mono shrink-0">{{ imageSizeText }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#E8F624] animate-pulse"></span>
+                  <h4 class="text-sm font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                    <ScanText class="w-4 h-4 text-[#E8F624]" />
+                    <span>排班磁轨数据已就绪</span>
+                  </h4>
+                </div>
+                <span class="text-xs font-tech text-[#E8F624] bg-[#181A1E] px-2.5 py-0.5 rounded-full border border-[#2A2E35]">
+                  READY
+                </span>
               </div>
-              <p class="text-xs text-slate-400 mt-0.5">
-                AI 将依据系统 Prompt 自动映射手写班次。
+              <p class="text-[11px] text-[#9CA3AF] font-tech mt-1">
+                多模态视觉引擎将提取手写班次代码，自动映射标准工作时段。
               </p>
             </div>
 
-            <!-- Target Staff Selector -->
-            <div class="p-3.5 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+            <!-- Staff Parameter Input Deck (目标员工选择插槽) -->
+            <div class="p-3.5 rounded-2xl zzz-slot space-y-2.5">
               <div class="flex items-center justify-between">
-                <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <User class="w-3.5 h-3.5 text-indigo-400" />
-                  提取指定员工排班
+                <label class="text-xs font-bold text-white flex items-center gap-1.5 uppercase font-sans">
+                  <User class="w-3.5 h-3.5 text-[#E8F624]" />
+                  <span>指定提取员工 // TARGET STAFF</span>
                 </label>
-                <span class="text-[11px] text-slate-500">留空则自动识别表格首位员工</span>
-              </div>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  v-model="targetPersonName"
-                  placeholder="例如: 张三、李四、Alex、Sam"
-                  class="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
+                <span class="text-[10px] font-tech text-[#9CA3AF]">留空默认提取首位</span>
               </div>
 
-              <!-- Available Detected Staff Shortcuts -->
+              <!-- Input Bar -->
+              <input
+                type="text"
+                v-model="targetPersonName"
+                placeholder="例如: 张三、李四、Alex、Sam"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-[#111215] border-2 border-[#181A1D] text-xs font-bold text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#E8F624] transition font-tech"
+              />
+
+              <!-- Detected Staff Pills (快捷切换胶囊) -->
               <div v-if="availableStaffList && availableStaffList.length > 0" class="pt-1">
-                <div class="text-[11px] text-slate-400 mb-1">表中检测到下列员工姓名（点击切换）：</div>
+                <div class="text-[10px] font-tech text-[#9CA3AF] mb-1.5 uppercase">
+                  DETECTED STAFF LIST // 点击直接载入:
+                </div>
                 <div class="flex flex-wrap gap-1.5">
                   <button
                     v-for="name in availableStaffList"
@@ -145,10 +231,10 @@
                     type="button"
                     @click="targetPersonName = name; $emit('reparse-person', name)"
                     :class="[
-                      'px-2.5 py-1 rounded-md text-[11px] border transition',
+                      'px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border-2',
                       targetPersonName === name
-                        ? 'bg-indigo-600 text-white border-indigo-500 font-medium'
-                        : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-slate-500'
+                        ? 'bg-[#E8F624] text-black border-[#181A1D] shadow-[0_2px_0_#181A1D]'
+                        : 'bg-[#181A1E] text-[#9CA3AF] border-[#2A2E35] hover:text-white hover:border-[#9CA3AF]'
                     ]"
                   >
                     {{ name }}
@@ -157,17 +243,17 @@
               </div>
             </div>
 
-            <!-- Parse Action Button -->
+            <!-- Primary Execution Button (实体高饱和柠檬黄按键) -->
             <div>
               <button
                 type="button"
                 @click="startParse"
                 :disabled="isParsing"
-                class="w-full py-3.5 px-4 rounded-xl glass-button text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                class="w-full py-3.5 px-5 rounded-2xl zzz-btn-yellow text-black text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
               >
-                <Loader2 v-if="isParsing" class="w-5 h-5 animate-spin text-white" />
-                <Sparkles v-else class="w-5 h-5 text-indigo-300" />
-                <span>{{ isParsing ? (progressText || '正在识别中...') : '开始识别' }}</span>
+                <Loader2 v-if="isParsing" class="w-5 h-5 animate-spin stroke-[2.2]" />
+                <Sparkles v-else class="w-5 h-5 stroke-[2.2]" />
+                <span>{{ isParsing ? (progressText || '磁带数据解析中...') : '启动多模态识别 // START SCAN' }}</span>
               </button>
             </div>
           </div>
@@ -178,27 +264,26 @@
     <!-- Fullscreen Modal View with Teleport -->
     <Teleport to="body" v-if="isFullscreen">
       <div 
-        class="fixed inset-0 z-[10000] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-2 sm:p-4 select-none"
+        class="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none"
         @click="isFullscreen = false"
       >
-        <!-- Center Image -->
-        <div class="max-w-full max-h-[85vh] flex items-center justify-center p-2" @click.stop>
+        <div class="relative max-w-full max-h-[85vh] p-2 rounded-2xl bg-[#1E2024] border-[2.5px] border-[#181A1D] shadow-2xl" @click.stop>
           <img 
             :src="imagePreview" 
             alt="排班图片原图预览" 
-            class="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl" 
+            class="max-w-full max-h-[75vh] object-contain rounded-xl" 
           />
         </div>
 
-        <!-- Bottom Close Button for Mobile -->
-        <div class="absolute bottom-8 inset-x-0 flex justify-center pb-safe z-20 pointer-events-none">
+        <!-- Pure Red Close Capsule Button -->
+        <div class="mt-4">
           <button
             type="button"
             @click.stop="isFullscreen = false"
-            class="pointer-events-auto px-6 py-2.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-white/20 text-white text-xs font-semibold shadow-xl active:scale-95 transition flex items-center gap-2 cursor-pointer"
+            class="px-6 py-2 rounded-full zzz-btn-red text-xs font-bold flex items-center gap-2 cursor-pointer"
           >
-            <X class="w-4 h-4" />
-            <span>关闭预览</span>
+            <X class="w-4 h-4 stroke-[2.2]" />
+            <span>关闭预览 // CLOSE</span>
           </button>
         </div>
       </div>
