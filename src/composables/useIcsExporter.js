@@ -7,7 +7,8 @@ export function useIcsExporter() {
   const isIosDevice = ref(isIOS());
 
   function exportScheduleToIcs(shifts, options = {}) {
-    if (!shifts || shifts.length === 0) {
+    const isMulti = options.exportScope === 'all' && Array.isArray(options.staffSchedules) && options.staffSchedules.length > 0;
+    if (!isMulti && (!shifts || shifts.length === 0)) {
       throw new Error('没有可导出的排班数据');
     }
 
@@ -16,7 +17,7 @@ export function useIcsExporter() {
       const icsString = generateIcsContent(shifts, options);
       
       const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const staffPrefix = options.staffName ? `${options.staffName}-` : '';
+      const staffPrefix = isMulti ? '全员排班-' : (options.staffName ? `${options.staffName}-` : '');
       const filename = `排班-${staffPrefix}${nowStr}.ics`;
 
       downloadIcsFile(icsString, filename);

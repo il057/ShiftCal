@@ -36,7 +36,7 @@ export function useScheduleHistory() {
   /**
    * Save or update a schedule record
    */
-  function saveScheduleRecord({ id, staffName, monthInfo, shifts }) {
+  function saveScheduleRecord({ id, staffName, monthInfo, shifts, staffSchedules = [], extractMode = 'single', myStaffName = '' }) {
     if (!shifts || !Array.isArray(shifts) || shifts.length === 0) return null;
 
     const workDays = shifts.filter(s => !s.is_off).length;
@@ -59,6 +59,9 @@ export function useScheduleHistory() {
       workDays,
       offDays,
       savedAt: formattedDate,
+      extractMode,
+      myStaffName,
+      staffSchedules: Array.isArray(staffSchedules) ? JSON.parse(JSON.stringify(staffSchedules)) : [],
       shifts: JSON.parse(JSON.stringify(shifts)) // deep copy
     };
 

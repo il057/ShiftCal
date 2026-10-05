@@ -19,7 +19,11 @@ export function useScheduleParser() {
   }
 
   // 组装用户端提示词（利用 Date.now() 注入真实当前基准日期）
-  function buildUserPrompt(targetPerson = '') {
+  function buildUserPrompt(parseOptions = {}) {
+    const opts = typeof parseOptions === 'string'
+      ? { extractMode: 'single', targetPerson: parseOptions }
+      : { extractMode: 'single', targetPerson: '', myName: '', ...parseOptions };
+
     const now = new Date(Date.now());
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 1-12
@@ -34,10 +38,20 @@ export function useScheduleParser() {
     p += `2. 若表头月份数值 < 当前月份 ${currentMonth}（例如当前是 12 月或 11 月，而表头是 Jan/1月 或 Feb/2月），则该排班表属于跨年的新年排班，年份必须自动递增为下一年：【${nextYear} 年】，严禁标记为过去的年份！\n`;
     p += `3. 若表头有清晰手写的 4 位数年份（如 2026、2027），以手写年份为最高优先级。\n\n`;
 
-    if (targetPerson && targetPerson.trim()) {
-      p += `特别指定：当前仅需提取员工【${targetPerson.trim()}】所在行的每日排班数据。\n`;
+    if (opts.extractMode === 'all') {
+      p += `【关键提取模式：提取全部员工排班】\n`;
+      p += `表格中若有多个员工行，请完整提取图片中出现的【每一位员工】的所有日期排班数据！\n`;
+      p += `请在 staff_schedules 数组中输出每位员工的对象（含 staff_name 与完整的每日排班列表 shifts）；并在 available_staff_names 中列出全部员工姓名。\n`;
+      if (opts.myName && opts.myName.trim()) {
+        p += `用户本人姓名是【${opts.myName.trim()}】，请特别注意精准识别该员工行。\n`;
+      }
     } else {
-      p += `提示：表格中若有多个员工行，请在 metadata 的 available_staff_names 中列出全部员工姓名；并在 shifts 中提取第一位员工的完整排班。\n`;
+      p += `【关键提取模式：提取指定/单人排班】\n`;
+      if (opts.targetPerson && opts.targetPerson.trim()) {
+        p += `特别指定：当前仅需提取员工【${opts.targetPerson.trim()}】所在行的每日排班数据。\n`;
+      } else {
+        p += `提示：表格中若有多个员工行，请在 available_staff_names 中列出全部员工姓名；并在 shifts / staff_schedules 中提取第一位员工的完整排班。\n`;
+      }
     }
     p += `请确保输出严格合法的纯 JSON 字符串。`;
     return p;
@@ -98,7 +112,11 @@ export function useScheduleParser() {
   }
 
   // 调用多模态 API 进行排班图片解析
-  async function parseScheduleImage(imageBase64, targetPerson = '') {
+  async function parseScheduleImage(imageBase64, parseOptions = {}) {
+    const opts = typeof parseOptions === 'string'
+      ? { extractMode: 'single', targetPerson: parseOptions }
+      : { extractMode: 'single', targetPerson: '', myName: '', ...parseOptions };
+
     isParsing.value = true;
     parseError.value = null;
     parseProgressText.value = '正在识别中...';
@@ -108,7 +126,7 @@ export function useScheduleParser() {
       let baseUrl = config.baseUrl?.trim();
       const model = getEffectiveModel();
       const { mimeType, data } = cleanBase64(imageBase64);
-      const userPrompt = buildUserPrompt(targetPerson);
+      const userPrompt = buildUserPrompt(opts);
       // 每次解析动态生成注入了 Date.now() 真实基准时间的系统 Prompt
       const dynamicSystemPrompt = getSystemParsePrompt();
 
@@ -224,7 +242,7 @@ export function useScheduleParser() {
       const parsedData = JSON.parse(cleanJsonStr);
 
       // 数据标准化与完整性保障
-      const sanitized = sanitizeScheduleData(parsedData);
+      const sanitized = sanitizeScheduleData(parsedData, opts);
       return sanitized;
     } catch (err) {
       console.error('Schedule parse error:', err);
@@ -253,45 +271,89 @@ export function useScheduleParser() {
     return cleaned;
   }
 
-  // 标准化清洗与置信度校验
-  function sanitizeScheduleData(data) {
-    const staffName = data.staff_name || '';
-    const monthInfo = data.month_info || '';
-    const availableStaffNames = Array.isArray(data.available_staff_names) ? data.available_staff_names : [];
-    
-    let rawShifts = Array.isArray(data.shifts) ? data.shifts : [];
+  // 单个班次条目清洗与置信度校验
+  function cleanShiftItem(item, idx, staff = '') {
+    const isOff = Boolean(item.is_off);
+    const startTime = item.start_time || null;
+    const endTime = item.end_time || null;
+    const confidence = typeof item.confidence === 'number' ? item.confidence : 0.85;
 
-    const shifts = rawShifts.map((item, idx) => {
-      const isOff = Boolean(item.is_off);
-      const startTime = item.start_time || null;
-      const endTime = item.end_time || null;
-      const confidence = typeof item.confidence === 'number' ? item.confidence : 0.85;
-
-      const isLowConfidence = confidence < 0.8;
-      const isMissingTime = !isOff && (!startTime || !endTime);
-      const isAnomaly = isLowConfidence || isMissingTime;
-
-      return {
-        id: `shift_${Date.now()}_${idx}`,
-        date: item.date || '',
-        raw_text: item.raw_text || (isOff ? 'X' : ''),
-        is_off: isOff,
-        start_time: startTime,
-        end_time: endTime,
-        confidence: Number(confidence.toFixed(2)),
-        note: item.note || '',
-        isAnomaly: isAnomaly,
-        anomalyReason: isMissingTime ? '缺少班次时间' : (isLowConfidence ? '置信度低，建议人工核验' : '')
-      };
-    });
-
-    shifts.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const isLowConfidence = confidence < 0.8;
+    const isMissingTime = !isOff && (!startTime || !endTime);
+    const isAnomaly = isLowConfidence || isMissingTime;
 
     return {
-      staffName,
+      id: `shift_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${idx}`,
+      staffName: staff,
+      date: item.date || '',
+      raw_text: item.raw_text || (isOff ? 'X' : ''),
+      is_off: isOff,
+      start_time: startTime,
+      end_time: endTime,
+      confidence: Number(confidence.toFixed(2)),
+      note: item.note || '',
+      isAnomaly: isAnomaly,
+      anomalyReason: isMissingTime ? '缺少班次时间' : (isLowConfidence ? '置信度低，建议人工核验' : '')
+    };
+  }
+
+  // 标准化清洗与置信度校验（兼容单人与全员 staff_schedules）
+  function sanitizeScheduleData(data, opts = {}) {
+    const monthInfo = data.month_info || '';
+    let availableStaffNames = Array.isArray(data.available_staff_names) ? [...data.available_staff_names] : [];
+
+    let staffSchedules = [];
+
+    // 1. 若模型返回了 staff_schedules
+    if (Array.isArray(data.staff_schedules) && data.staff_schedules.length > 0) {
+      staffSchedules = data.staff_schedules.map((st, sIdx) => {
+        const name = (st.staff_name || `员工${sIdx + 1}`).trim();
+        if (!availableStaffNames.includes(name)) {
+          availableStaffNames.push(name);
+        }
+        const rawShifts = Array.isArray(st.shifts) ? st.shifts : [];
+        const cleanShifts = rawShifts.map((shift, idx) => cleanShiftItem(shift, idx, name));
+        cleanShifts.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        return {
+          staffName: name,
+          shifts: cleanShifts
+        };
+      });
+    }
+
+    // 2. 若未能从 staff_schedules 获取，或者属于单人格式 data.shifts
+    if (staffSchedules.length === 0) {
+      const singleName = (data.staff_name || opts.targetPerson || opts.myName || '员工').trim();
+      if (!availableStaffNames.includes(singleName)) {
+        availableStaffNames.push(singleName);
+      }
+      const rawShifts = Array.isArray(data.shifts) ? data.shifts : [];
+      const cleanShifts = rawShifts.map((shift, idx) => cleanShiftItem(shift, idx, singleName));
+      cleanShifts.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      staffSchedules.push({
+        staffName: singleName,
+        shifts: cleanShifts
+      });
+    }
+
+    // 3. 决定主展示员工（优先匹配本人的姓名，其次为目标员工，其次为第一位员工）
+    let primaryStaffName = staffSchedules[0]?.staffName || '员工';
+    const norm = (s) => (s || '').trim().toLowerCase();
+
+    if (opts.myName && staffSchedules.some(s => norm(s.staffName) === norm(opts.myName))) {
+      primaryStaffName = staffSchedules.find(s => norm(s.staffName) === norm(opts.myName)).staffName;
+    } else if (opts.targetPerson && staffSchedules.some(s => norm(s.staffName) === norm(opts.targetPerson))) {
+      primaryStaffName = staffSchedules.find(s => norm(s.staffName) === norm(opts.targetPerson)).staffName;
+    }
+
+    const primarySchedule = staffSchedules.find(s => s.staffName === primaryStaffName) || staffSchedules[0];
+
+    return {
+      staffName: primaryStaffName,
       monthInfo,
       availableStaffNames,
-      shifts
+      staffSchedules,
+      shifts: primarySchedule ? primarySchedule.shifts : []
     };
   }
 

@@ -201,44 +201,103 @@
               </p>
             </div>
 
-            <!-- Staff Parameter Input Deck (目标员工选择插槽) -->
+            <!-- Staff Parameter & Mode Deck (提取模式与目标员工选择插槽) -->
             <div class="p-3.5 rounded-2xl zzz-slot space-y-2.5">
               <div class="flex items-center justify-between">
                 <label class="text-xs font-bold text-white flex items-center gap-1.5 uppercase font-sans">
-                  <User class="w-3.5 h-3.5 text-[#E8F624]" />
-                  <span>指定提取员工 // TARGET STAFF</span>
+                  <SlidersHorizontal class="w-3.5 h-3.5 text-[#E8F624]" />
+                  <span>提取模式 // EXTRACTION MODE</span>
                 </label>
-                <span class="text-[10px] font-tech text-[#9CA3AF]">留空默认提取首位</span>
+                <span class="text-[9px] font-tech text-[#E8F624] px-2 py-0.5 rounded-full bg-black border border-[#E8F624]/40 font-bold">
+                  {{ extractMode === 'all' ? 'ALL // 全员' : 'SOLO // 单人' }}
+                </span>
               </div>
 
-              <!-- Input Bar -->
-              <input
-                type="text"
-                v-model="targetPersonName"
-                placeholder="例如: 张三、李四、Alex、Sam"
-                class="w-full px-3.5 py-2.5 rounded-xl bg-[#111215] border-2 border-[#181A1D] text-xs font-bold text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#E8F624] transition font-tech"
-              />
+              <!-- Mode Switch Dual Tabs -->
+              <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#111215] border-2 border-[#181A1D]">
+                <button
+                  type="button"
+                  @click="extractMode = 'single'"
+                  :class="[
+                    'py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none',
+                    extractMode === 'single'
+                      ? 'bg-[#E8F624] text-black shadow-[0_2px_0_#181A1D]'
+                      : 'text-[#9CA3AF] hover:text-white'
+                  ]"
+                >
+                  <User class="w-3.5 h-3.5" />
+                  <span>提取指定</span>
+                </button>
 
-              <!-- Detected Staff Pills (快捷切换胶囊) -->
-              <div v-if="availableStaffList && availableStaffList.length > 0" class="pt-1">
-                <div class="text-[10px] font-tech text-[#9CA3AF] mb-1.5 uppercase">
-                  DETECTED STAFF LIST // 点击直接载入:
+                <button
+                  type="button"
+                  @click="extractMode = 'all'"
+                  :class="[
+                    'py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none relative',
+                    extractMode === 'all'
+                      ? 'bg-[#E8F624] text-black shadow-[0_2px_0_#181A1D]'
+                      : 'text-[#9CA3AF] hover:text-white'
+                  ]"
+                >
+                  <Users class="w-3.5 h-3.5" />
+                  <span>提取所有</span>
+                  <span class="px-1 py-0.2 rounded bg-black text-[#E8F624] font-tech text-[8px] border border-[#E8F624]/40">ALL</span>
+                </button>
+              </div>
+
+              <!-- Mode 1: Single Staff Input Deck -->
+              <div v-if="extractMode === 'single'" class="space-y-2 pt-0.5">
+                <div class="flex items-center justify-between text-[11px] text-[#9CA3AF]">
+                  <span>目标员工姓名:</span>
+                  <span class="font-tech text-[10px]">留空默认提取首位</span>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <button
-                    v-for="name in availableStaffList"
-                    :key="name"
-                    type="button"
-                    @click="targetPersonName = name; $emit('reparse-person', name)"
-                    :class="[
-                      'px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border-2',
-                      targetPersonName === name
-                        ? 'bg-[#E8F624] text-black border-[#181A1D] shadow-[0_2px_0_#181A1D]'
-                        : 'bg-[#181A1E] text-[#9CA3AF] border-[#2A2E35] hover:text-white hover:border-[#9CA3AF]'
-                    ]"
-                  >
-                    {{ name }}
-                  </button>
+                <input
+                  type="text"
+                  v-model="targetPersonName"
+                  placeholder="例如: 张三、李四、Alex、Sam"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-[#111215] border-2 border-[#181A1D] text-xs font-bold text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#E8F624] transition font-tech"
+                />
+
+                <!-- Detected Staff Pills (快捷切换胶囊) -->
+                <div v-if="availableStaffList && availableStaffList.length > 0" class="pt-1">
+                  <div class="text-[10px] font-tech text-[#9CA3AF] mb-1.5 uppercase">
+                    DETECTED STAFF LIST // 点击直接选用:
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button
+                      v-for="name in availableStaffList"
+                      :key="name"
+                      type="button"
+                      @click="targetPersonName = name"
+                      :class="[
+                        'px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border-2',
+                        targetPersonName === name
+                          ? 'bg-[#E8F624] text-black border-[#181A1D] shadow-[0_2px_0_#181A1D]'
+                          : 'bg-[#181A1E] text-[#9CA3AF] border-[#2A2E35] hover:text-white hover:border-[#9CA3AF]'
+                      ]"
+                    >
+                      {{ name }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode 2: All Staff Input Deck -->
+              <div v-else class="space-y-2 pt-0.5">
+                <div class="p-2.5 rounded-xl bg-[#181A1E] border border-[#2A2E35] text-[11px] text-[#D1D5DB] leading-relaxed">
+                  <span class="text-[#E8F624] font-bold">全员提取模式:</span> 识别表中全部员工，可在同屏中对照所有人的排班，并在导出时自由选择导出谁的班次或合并导出。
+                </div>
+                <div>
+                  <div class="flex items-center justify-between text-[11px] text-[#9CA3AF] mb-1">
+                    <span>我的姓名:</span>
+                    <span class="font-tech text-[10px] text-[#36E4DA]">智能防吵醒</span>
+                  </div>
+                  <input
+                    type="text"
+                    v-model="myStaffName"
+                    placeholder="输入您在表上的姓名 (例如: 张三)"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-[#111215] border-2 border-[#181A1D] text-xs font-bold text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#E8F624] transition font-tech"
+                  />
                 </div>
               </div>
             </div>
@@ -253,7 +312,7 @@
               >
                 <Loader2 v-if="isParsing" class="w-5 h-5 animate-spin stroke-[2.2]" />
                 <Sparkles v-else class="w-5 h-5 stroke-[2.2]" />
-                <span>{{ isParsing ? (progressText || '磁带数据解析中...') : '启动多模态识别 // START SCAN' }}</span>
+                <span>{{ isParsing ? (progressText || '磁带数据解析中...') : (extractMode === 'all' ? '启动全员识别 // SCAN ALL' : '启动多模态识别 // START SCAN') }}</span>
               </button>
             </div>
           </div>
@@ -293,7 +352,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { Camera, ImagePlus, Sparkles, Trash2, Maximize2, X, ScanText, User, Loader2 } from 'lucide-vue-next';
+import { Camera, ImagePlus, Sparkles, Trash2, Maximize2, X, ScanText, User, Users, SlidersHorizontal, Loader2 } from 'lucide-vue-next';
 import { useConfig } from '../composables/useConfig';
 
 const props = defineProps({
@@ -320,7 +379,9 @@ const cameraInputRef = ref(null);
 const imagePreview = ref('');
 const imageSizeText = ref('');
 const isFullscreen = ref(false);
+const extractMode = ref('single'); // 'single' | 'all'
 const targetPersonName = ref(config.savedStaffName || '');
+const myStaffName = ref(config.savedStaffName || '');
 
 function triggerFileInput() {
   fileInputRef.value?.click();
@@ -370,12 +431,16 @@ function openFullScreen() {
 function startParse() {
   emit('start-parse', {
     imageBase64: imagePreview.value,
-    targetPerson: targetPersonName.value
+    extractMode: extractMode.value,
+    targetPerson: targetPersonName.value,
+    myStaffName: myStaffName.value
   });
 }
 
 defineExpose({
   setImage: (b64) => { imagePreview.value = b64; },
-  setTargetPerson: (name) => { targetPersonName.value = name; }
+  setTargetPerson: (name) => { targetPersonName.value = name; },
+  setMyStaffName: (name) => { myStaffName.value = name; },
+  setExtractMode: (mode) => { extractMode.value = mode; }
 });
 </script>

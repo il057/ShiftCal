@@ -130,9 +130,9 @@ export function getSystemParsePrompt() {
 
 【输出与格式规则】：
 - 如果表头为星期几 (SUN, MON, TUE, WED, THU, FRI, SAT) 且有日期数字 (例如 1, 2, ... 31)，请准确拼装每项的完整日期 date (YYYY-MM-DD)。
-- 若表格包含多个员工姓名：
-  * 如果指定了目标员工，仅提取该特定员工的这行排班；
-  * 如果未指定，提取表格中第一位员工的完整排班，并在返回的 metadata 中列出识别到的所有员工姓名列表 available_staff_names。
+- 员工排班提取规则：
+  * 若用户指示提取【全部员工】，请在 staff_schedules 数组中列出识别到的每一位员工（staff_name）及其各自的完整排班 shifts 列表；并在 available_staff_names 中列出全部员工姓名。
+  * 若用户指示提取【指定员工】，仅在 staff_schedules 包含该员工（或输出该员工的 shifts），并在 staff_name 中标明该员工。
 - 置信度 confidence 规范：
   * 清晰确定的项给出 0.90 ~ 1.0；
   * 若字迹模糊、有涂改划线、推测字符或单元格无法 100% 确定，置信度 confidence 必须低于 0.7 (例如 0.4~0.65)。
@@ -143,26 +143,32 @@ export function getSystemParsePrompt() {
   "staff_name": "示例员工",
   "month_info": "Oct",
   "available_staff_names": ["员工A", "员工B", "员工C"],
-  "shifts": [
+  "staff_schedules": [
     {
-      "date": "${currentYear}-10-04",
-      "raw_text": "X",
-      "is_off": true,
-      "start_time": null,
-      "end_time": null,
-      "confidence": 0.95,
-      "note": "休假"
-    },
-    {
-      "date": "${currentYear}-10-05",
-      "raw_text": "2-11",
-      "is_off": false,
-      "start_time": "14:00",
-      "end_time": "23:00",
-      "confidence": 0.92,
-      "note": "打烊班"
+      "staff_name": "员工A",
+      "shifts": [
+        {
+          "date": "${currentYear}-10-04",
+          "raw_text": "X",
+          "is_off": true,
+          "start_time": null,
+          "end_time": null,
+          "confidence": 0.95,
+          "note": "休假"
+        },
+        {
+          "date": "${currentYear}-10-05",
+          "raw_text": "2-11",
+          "is_off": false,
+          "start_time": "14:00",
+          "end_time": "23:00",
+          "confidence": 0.92,
+          "note": "打烊班"
+        }
+      ]
     }
-  ]
+  ],
+  "shifts": []
 }
 `.trim();
 }

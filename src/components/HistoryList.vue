@@ -57,6 +57,9 @@
               <span class="px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-[#E8F624] text-black border border-[#181A1D] truncate">
                 {{ record.staffName }}
               </span>
+              <span v-if="record.staffSchedules && record.staffSchedules.length > 1" class="px-1.5 py-0.2 rounded bg-black text-[#E8F624] text-[9px] font-tech font-bold border border-[#E8F624]/40 shrink-0">
+                全员 · {{ record.staffSchedules.length }}人
+              </span>
               <span v-if="record.monthInfo" class="px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-tech font-bold bg-[#181A1E] text-white border border-[#181A1D] shrink-0">
                 {{ record.monthInfo }}
               </span>

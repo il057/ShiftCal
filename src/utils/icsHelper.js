@@ -39,16 +39,25 @@ export function foldIcsLine(line) {
 }
 
 // 生成符合 RFC 5545 的完整 VCALENDAR 字符串
-export function generateIcsContent(shifts, options = {}) {
+export function generateIcsContent(shiftsOrStaffSchedules, options = {}) {
   const {
     calendarTitle = '工作排班表',
     staffName = '',
+    exportScope = 'single', // 'single' | 'all'
+    staffSchedules = [],
+    myStaffName = '',
+    alarmScope = 'my_only', // 'my_only' | 'all' | 'none'
     exportOffDays = false,
     alarmMinutes = 60, // 提前提醒分钟数，默认提前 60 分钟
     timezone = 'Asia/Shanghai'
   } = options;
 
   const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const isMultiStaff = exportScope === 'all' && Array.isArray(staffSchedules) && staffSchedules.length > 0;
+
+  const titleSuffix = isMultiStaff 
+    ? ' (全员排班)' 
+    : (staffName ? ` - ${staffName}` : '');
 
   const lines = [
     'BEGIN:VCALENDAR',
@@ -56,28 +65,51 @@ export function generateIcsContent(shifts, options = {}) {
     'PRODID:-//ShiftCal//Handwritten Shift Schedule PWA//CN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${calendarTitle}${staffName ? ` - ${staffName}` : ''}`,
+    `X-WR-CALNAME:${calendarTitle}${titleSuffix}`,
     `X-WR-TIMEZONE:${timezone}`,
   ];
 
-  for (const shift of shifts) {
+  // 整理待导出的班次条目
+  const itemsToExport = [];
+  if (isMultiStaff) {
+    for (const st of staffSchedules) {
+      const sName = (st.staffName || '员工').trim();
+      for (const sh of (st.shifts || [])) {
+        itemsToExport.push({ shift: sh, staff: sName });
+      }
+    }
+  } else {
+    const sName = (staffName || '员工').trim();
+    const rawList = Array.isArray(shiftsOrStaffSchedules) ? shiftsOrStaffSchedules : [];
+    for (const sh of rawList) {
+      itemsToExport.push({ shift: sh, staff: sName });
+    }
+  }
+
+  const norm = (s) => (s || '').trim().toLowerCase();
+
+  for (const { shift, staff } of itemsToExport) {
     if (!shift.date) continue;
+
+    const isMyShift = Boolean(myStaffName && norm(staff) === norm(myStaffName));
 
     // 如果是休假
     if (shift.is_off) {
       if (!exportOffDays) continue; // 用户未开启导出休假则跳过
 
-      const uid = `off-${shift.date}-${staffName || 'user'}@shiftcal.local`;
+      const safeStaff = encodeURIComponent(staff);
+      const uid = `off-${shift.date}-${safeStaff}@shiftcal.local`;
       const dtStart = formatIcsDate(shift.date);
       const dtEnd = getNextDateStr(shift.date);
+      const summary = isMultiStaff ? `[${isMyShift ? '我·' : ''}${staff}] 休假 (OFF)` : '休假 (OFF)';
 
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${uid}`);
       lines.push(`DTSTAMP:${nowStamp}`);
-      lines.push(`SUMMARY:休假 (OFF)`);
+      lines.push(`SUMMARY:${summary}`);
       lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
       lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
-      lines.push(`DESCRIPTION:手写排班表识别结果\\n标记: ${shift.raw_text || 'X'}`);
+      lines.push(`DESCRIPTION:员工: ${staff}\\n手写排班表识别结果\\n标记: ${shift.raw_text || 'X'}`);
       lines.push('STATUS:CONFIRMED');
       lines.push('TRANSP:TRANSPARENT'); // 休假不占用忙碌时间
       lines.push('END:VEVENT');
@@ -87,19 +119,24 @@ export function generateIcsContent(shifts, options = {}) {
     // 正常工作班次
     if (!shift.start_time || !shift.end_time) continue;
 
-    const uid = `shift-${shift.date}-${shift.start_time.replace(':', '')}-${staffName || 'user'}@shiftcal.local`;
+    const safeStaff = encodeURIComponent(staff);
+    const uid = `shift-${shift.date}-${shift.start_time.replace(':', '')}-${safeStaff}@shiftcal.local`;
     const dtStart = formatIcsDateTime(shift.date, shift.start_time);
     const dtEnd = formatIcsDateTime(shift.date, shift.end_time);
+
+    const summary = isMultiStaff 
+      ? `[${isMyShift ? '我·' : ''}${staff}] 排班: ${shift.start_time} - ${shift.end_time}`
+      : `排班: ${shift.start_time} - ${shift.end_time}`;
 
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:${uid}`);
     lines.push(`DTSTAMP:${nowStamp}`);
-    lines.push(`SUMMARY:排班: ${shift.start_time} - ${shift.end_time}`);
+    lines.push(`SUMMARY:${summary}`);
     lines.push(`DTSTART;TZID=${timezone}:${dtStart}`);
     lines.push(`DTEND;TZID=${timezone}:${dtEnd}`);
     
     const descParts = [
-      staffName ? `员工: ${staffName}` : '',
+      `员工: ${staff}${isMyShift ? ' (本人)' : ''}`,
       `排班时段: ${shift.start_time} 至 ${shift.end_time}`,
       shift.raw_text ? `手写原标: ${shift.raw_text}` : '',
       shift.confidence ? `AI识别置信度: ${(shift.confidence * 100).toFixed(0)}%` : '',
@@ -110,12 +147,30 @@ export function generateIcsContent(shifts, options = {}) {
     lines.push(`DESCRIPTION:${descParts.join('\\n')}`);
     lines.push('STATUS:CONFIRMED');
 
-    // 添加上班闹钟/提醒
+    // 智能闹钟判断：
+    // 若为单人导出：正常根据 alarmMinutes 添加闹钟；
+    // 若为全员导出：
+    // - alarmScope === 'my_only': 仅且仅当 isMyShift 为 true 时添加闹钟提醒！同事班次静默无闹钟；
+    // - alarmScope === 'all': 全员班次均添加闹钟；
+    // - alarmScope === 'none': 全员均不加闹钟。
+    let shouldAddAlarm = false;
     if (alarmMinutes > 0) {
+      if (!isMultiStaff) {
+        shouldAddAlarm = true;
+      } else {
+        if (alarmScope === 'all') {
+          shouldAddAlarm = true;
+        } else if (alarmScope === 'my_only') {
+          shouldAddAlarm = isMyShift;
+        }
+      }
+    }
+
+    if (shouldAddAlarm) {
       lines.push('BEGIN:VALARM');
       lines.push(`TRIGGER:-PT${alarmMinutes}M`);
       lines.push('ACTION:DISPLAY');
-      lines.push(`DESCRIPTION:即将上班提醒: ${shift.start_time} - ${shift.end_time}`);
+      lines.push(`DESCRIPTION:即将上班提醒: [${staff}] ${shift.start_time} - ${shift.end_time}`);
       lines.push('END:VALARM');
     }
 

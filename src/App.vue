@@ -310,6 +310,11 @@
             <!-- Shift Grid View -->
             <ShiftGridView
               :shifts="shifts"
+              :staff-schedules="staffSchedules"
+              :current-staff-name="currentStaffName"
+              :my-staff-name="myStaffName"
+              @select-staff="handleSelectStaff"
+              @set-my-staff="handleSetMyStaff"
               @edit-shift="handleOpenShiftEditor"
               @add-shift="handleAddNewShift"
             />
@@ -357,6 +362,8 @@
       :is-open="isExportOpen"
       :staff-name="currentStaffName"
       :month-info="monthInfo"
+      :staff-schedules="staffSchedules"
+      :my-staff-name="myStaffName"
       @close="isExportOpen = false"
       @confirm-export="handleExecuteExport"
     />
@@ -432,9 +439,12 @@ function openSettings() {
 }
 
 const currentStaffName = ref('');
+const myStaffName = ref(config.savedStaffName || '');
 const monthInfo = ref('');
 const availableStaffList = ref([]);
+const staffSchedules = ref([]); // [{ staffName, shifts }]
 const shifts = ref([]);
+const extractMode = ref('single');
 const lastImageBase64 = ref('');
 
 // Toast notification
@@ -471,32 +481,49 @@ async function installPwa() {
 }
 
 // Parse action
-async function handleStartParse({ imageBase64, targetPerson }) {
+async function handleStartParse({ imageBase64, extractMode: mode = 'single', targetPerson = '', myStaffName: inputMyName = '' }) {
   if (!isConfigValid()) {
     isSettingsOpen.value = true;
     showToast('请先配置您的 API Key 与模型', 'error');
     return;
   }
 
+  extractMode.value = mode;
+  if (inputMyName) {
+    myStaffName.value = inputMyName;
+  }
   lastImageBase64.value = imageBase64;
+
   try {
-    const result = await parseScheduleImage(imageBase64, targetPerson);
-    currentStaffName.value = result.staffName || targetPerson || '员工';
+    const result = await parseScheduleImage(imageBase64, {
+      extractMode: mode,
+      targetPerson,
+      myName: myStaffName.value
+    });
+
+    currentStaffName.value = result.staffName || targetPerson || myStaffName.value || '员工';
     monthInfo.value = result.monthInfo || '';
     availableStaffList.value = result.availableStaffNames || [];
-    shifts.value = result.shifts;
+    staffSchedules.value = result.staffSchedules || [];
+    shifts.value = result.shifts || [];
 
     // Automatically persist to local history
     const savedRec = saveScheduleRecord({
       staffName: currentStaffName.value,
       monthInfo: monthInfo.value,
-      shifts: shifts.value
+      shifts: shifts.value,
+      staffSchedules: staffSchedules.value,
+      extractMode: extractMode.value,
+      myStaffName: myStaffName.value
     });
     if (savedRec) {
       currentRecordId.value = savedRec.id;
     }
 
-    showToast(`识别成功！共解析出 ${result.shifts.length} 天排班并保存至本地`);
+    const countInfo = staffSchedules.value.length > 1
+      ? `识别成功！解析出 ${staffSchedules.value.length} 位员工排班`
+      : `识别成功！解析出 ${result.shifts.length} 天排班`;
+    showToast(`${countInfo}并已保存至本地`);
     currentStep.value = 2; // Jump to Human-in-the-loop review
   } catch (err) {
     console.error('Schedule parse error:', err);
@@ -508,8 +535,24 @@ async function handleReparsePerson(name) {
   if (!lastImageBase64.value) return;
   handleStartParse({
     imageBase64: lastImageBase64.value,
-    targetPerson: name
+    extractMode: 'single',
+    targetPerson: name,
+    myStaffName: myStaffName.value
   });
+}
+
+// Multi-Staff switching and setting "Me"
+function handleSelectStaff(name) {
+  currentStaffName.value = name;
+  const target = staffSchedules.value.find(s => s.staffName === name);
+  if (target) {
+    shifts.value = target.shifts;
+  }
+}
+
+function handleSetMyStaff(name) {
+  myStaffName.value = name;
+  showToast(`已将【${name}】标记为本人排班，全员导出时将仅提醒此人班次`);
 }
 
 // History handlers
@@ -517,16 +560,28 @@ function handleLoadHistoryRecord(record) {
   currentRecordId.value = record.id;
   currentStaffName.value = record.staffName || '员工';
   monthInfo.value = record.monthInfo || '';
-  shifts.value = JSON.parse(JSON.stringify(record.shifts || []));
+  extractMode.value = record.extractMode || (record.staffSchedules?.length > 1 ? 'all' : 'single');
+  myStaffName.value = record.myStaffName || '';
+
+  if (Array.isArray(record.staffSchedules) && record.staffSchedules.length > 0) {
+    staffSchedules.value = JSON.parse(JSON.stringify(record.staffSchedules));
+    const activeStaff = staffSchedules.value.find(s => s.staffName === currentStaffName.value) || staffSchedules.value[0];
+    currentStaffName.value = activeStaff.staffName;
+    shifts.value = activeStaff.shifts;
+  } else {
+    shifts.value = JSON.parse(JSON.stringify(record.shifts || []));
+    staffSchedules.value = [{
+      staffName: currentStaffName.value,
+      shifts: shifts.value
+    }];
+  }
+
   currentStep.value = 2; // Jump straight to Step 2 review/edit!
-  showToast(`已载入「${record.staffName}」的历史排班（${record.shifts.length}天）`);
+  showToast(`已载入「${record.staffName}」的历史排班（${shifts.value.length}天）`);
 }
 
 function handleExportHistoryRecord(record) {
-  currentRecordId.value = record.id;
-  currentStaffName.value = record.staffName || '员工';
-  monthInfo.value = record.monthInfo || '';
-  shifts.value = JSON.parse(JSON.stringify(record.shifts || []));
+  handleLoadHistoryRecord(record);
   isExportOpen.value = true;
 }
 
@@ -561,13 +616,28 @@ function handleSaveShift(updated) {
   }
   shifts.value.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
+  // Sync to staffSchedules
+  const st = staffSchedules.value.find(s => s.staffName === currentStaffName.value);
+  if (st) {
+    const sIdx = st.shifts.findIndex(s => s.id === updated.id);
+    if (sIdx !== -1) {
+      st.shifts[sIdx] = updated;
+    } else {
+      st.shifts.push(updated);
+    }
+    st.shifts.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  }
+
   // Sync to history if currently editing an active record
   if (currentRecordId.value) {
     saveScheduleRecord({
       id: currentRecordId.value,
       staffName: currentStaffName.value,
       monthInfo: monthInfo.value,
-      shifts: shifts.value
+      shifts: shifts.value,
+      staffSchedules: staffSchedules.value,
+      extractMode: extractMode.value,
+      myStaffName: myStaffName.value
     });
   }
 
@@ -576,12 +646,19 @@ function handleSaveShift(updated) {
 
 function handleDeleteShift(id) {
   shifts.value = shifts.value.filter(s => s.id !== id);
+  const st = staffSchedules.value.find(s => s.staffName === currentStaffName.value);
+  if (st) {
+    st.shifts = st.shifts.filter(s => s.id !== id);
+  }
   if (currentRecordId.value) {
     saveScheduleRecord({
       id: currentRecordId.value,
       staffName: currentStaffName.value,
       monthInfo: monthInfo.value,
-      shifts: shifts.value
+      shifts: shifts.value,
+      staffSchedules: staffSchedules.value,
+      extractMode: extractMode.value,
+      myStaffName: myStaffName.value
     });
   }
   showToast('已删除该天排班');
@@ -590,8 +667,11 @@ function handleDeleteShift(id) {
 // ICS Export execution
 function handleExecuteExport(exportOptions) {
   try {
-    const res = exportScheduleToIcs(shifts.value, exportOptions);
-    showToast(`日历文件 ${res.filename} 已下载，请在 Safari 中点击打开并导入`);
+    const res = exportScheduleToIcs(shifts.value, {
+      ...exportOptions,
+      staffSchedules: staffSchedules.value
+    });
+    showToast(`日历文件 ${res.filename} 已下载，请在日历中打开并导入`);
   } catch (err) {
     showToast(err.message || '导出失败', 'error');
   }

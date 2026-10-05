@@ -45,6 +45,160 @@
 
           <!-- Export Form -->
           <div class="mt-5 space-y-4 text-xs">
+            <!-- Multi-Staff Scope Switch (当存在多位员工时展示) -->
+            <div v-if="staffSchedules && staffSchedules.length > 1" class="p-3 rounded-2xl zzz-slot space-y-2.5">
+              <label class="block text-white font-bold font-sans flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <Users class="w-3.5 h-3.5 text-[#E8F624]" />
+                  <span>导出范围选择 // EXPORT SCOPE</span>
+                </span>
+                <span class="text-[9px] font-tech text-[#E8F624] px-1.5 py-0.2 rounded bg-black border border-[#E8F624]/40 font-bold">
+                  {{ exportForm.exportScope === 'all' ? 'TEAM' : 'SOLO' }}
+                </span>
+              </label>
+
+              <!-- Dual Pill Tabs -->
+              <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#111215] border-2 border-[#181A1D]">
+                <button
+                  type="button"
+                  @click="exportForm.exportScope = 'all'"
+                  :class="[
+                    'py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer',
+                    exportForm.exportScope === 'all'
+                      ? 'bg-[#E8F624] text-black shadow-[0_2px_0_#181A1D]'
+                      : 'text-[#9CA3AF] hover:text-white'
+                  ]"
+                >
+                  <Users class="w-3.5 h-3.5" />
+                  <span>合并导出全员排班</span>
+                </button>
+
+                <button
+                  type="button"
+                  @click="exportForm.exportScope = 'single'"
+                  :class="[
+                    'py-2 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer',
+                    exportForm.exportScope === 'single'
+                      ? 'bg-[#E8F624] text-black shadow-[0_2px_0_#181A1D]'
+                      : 'text-[#9CA3AF] hover:text-white'
+                  ]"
+                >
+                  <User class="w-3.5 h-3.5" />
+                  <span>导出指定员工</span>
+                </button>
+              </div>
+
+              <!-- Scope 1: Choose which single staff to export -->
+              <div v-if="exportForm.exportScope === 'single'" class="pt-1 space-y-1.5">
+                <div class="text-[11px] text-[#9CA3AF] flex items-center justify-between">
+                  <span>选择要导出的员工:</span>
+                  <span class="font-tech text-[#E8F624]">已选: {{ exportForm.selectedStaff }}</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="st in staffSchedules"
+                    :key="st.staffName"
+                    type="button"
+                    @click="exportForm.selectedStaff = st.staffName; exportForm.staffName = st.staffName"
+                    :class="[
+                      'px-3 py-1 rounded-full text-xs font-bold transition border-2 cursor-pointer',
+                      exportForm.selectedStaff === st.staffName
+                        ? 'bg-[#E8F624] text-black border-black shadow-[0_2px_0_#000]'
+                        : 'bg-[#181A1E] text-white border-[#2A2E35] hover:border-[#9CA3AF]'
+                    ]"
+                  >
+                    {{ st.staffName }}
+                    <span v-if="myStaffName && norm(myStaffName) === norm(st.staffName)" class="text-[9px] font-tech text-black bg-[#E8F624] px-1 rounded ml-1">我</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Scope 2: Multi-Staff Smart Alarm Policy (全员导出时的专属闹钟规则) -->
+              <div v-else class="pt-1 space-y-2">
+                <!-- Smart Alarm Selection -->
+                <div>
+                  <div class="text-[11px] text-[#9CA3AF] mb-1.5 flex items-center justify-between">
+                    <span>闹钟提醒范围策略:</span>
+                    <span class="text-[10px] text-[#36E4DA] font-tech">智能防吵醒机制</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      @click="exportForm.alarmScope = 'my_only'"
+                      :class="[
+                        'p-2 rounded-xl border-2 text-left transition cursor-pointer flex flex-col justify-between',
+                        exportForm.alarmScope === 'my_only'
+                          ? 'bg-[#2A2B20] border-[#E8F624] text-white shadow-[0_2px_0_#181A1D]'
+                          : 'bg-[#181A1E] border-[#2A2E35] text-[#9CA3AF] hover:text-white'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs" :class="exportForm.alarmScope === 'my_only' ? 'text-[#E8F624]' : ''">仅提醒本人</span>
+                        <span class="text-[8px] font-tech px-1 py-0.2 rounded bg-black text-[#E8F624] border border-[#E8F624]/30">推荐</span>
+                      </div>
+                      <span class="text-[9px] text-[#9CA3AF] mt-1 leading-tight">全员写入日历，仅在自己的班次前响铃</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      @click="exportForm.alarmScope = 'all'"
+                      :class="[
+                        'p-2 rounded-xl border-2 text-left transition cursor-pointer flex flex-col justify-between',
+                        exportForm.alarmScope === 'all'
+                          ? 'bg-[#2A2B20] border-[#E8F624] text-white shadow-[0_2px_0_#181A1D]'
+                          : 'bg-[#181A1E] border-[#2A2E35] text-[#9CA3AF] hover:text-white'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs" :class="exportForm.alarmScope === 'all' ? 'text-[#E8F624]' : ''">所有人均提醒</span>
+                      </div>
+                      <span class="text-[9px] text-[#9CA3AF] mt-1 leading-tight">所有人的每个班次都添加闹钟</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      @click="exportForm.alarmScope = 'none'"
+                      :class="[
+                        'p-2 rounded-xl border-2 text-left transition cursor-pointer flex flex-col justify-between',
+                        exportForm.alarmScope === 'none'
+                          ? 'bg-[#2A2B20] border-[#E8F624] text-white shadow-[0_2px_0_#181A1D]'
+                          : 'bg-[#181A1E] border-[#2A2E35] text-[#9CA3AF] hover:text-white'
+                      ]"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs" :class="exportForm.alarmScope === 'none' ? 'text-[#E8F624]' : ''">全员静默无提醒</span>
+                      </div>
+                      <span class="text-[9px] text-[#9CA3AF] mt-1 leading-tight">仅作为普通日历事件，不响铃</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Designated "Me" Staff Selection when alarmScope === 'my_only' -->
+                <div v-if="exportForm.alarmScope === 'my_only'" class="p-2.5 rounded-xl bg-[#111215] border border-[#2A2E35] space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-white font-bold">设定哪位员工是“我”:</span>
+                    <span class="text-[10px] text-[#E8F624] font-tech">当前识别: {{ exportForm.myStaffName || '未指定' }}</span>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button
+                      v-for="st in staffSchedules"
+                      :key="st.staffName"
+                      type="button"
+                      @click="exportForm.myStaffName = st.staffName"
+                      :class="[
+                        'px-2.5 py-1 rounded-full text-xs font-bold transition border cursor-pointer',
+                        norm(exportForm.myStaffName) === norm(st.staffName)
+                          ? 'bg-[#E8F624] text-black border-black shadow-[0_2px_0_#000]'
+                          : 'bg-[#181A1E] text-white border-[#2A2E35] hover:border-[#9CA3AF]'
+                      ]"
+                    >
+                      {{ st.staffName }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Calendar Title -->
             <div>
               <label class="block text-white font-bold mb-1.5 font-sans">
@@ -58,8 +212,8 @@
               />
             </div>
 
-            <!-- Staff Name in Title -->
-            <div>
+            <!-- Single Staff Name Tag (Only when exporting single staff) -->
+            <div v-if="!staffSchedules || staffSchedules.length <= 1 || exportForm.exportScope === 'single'">
               <label class="block text-white font-bold mb-1.5 font-sans">
                 员工姓名标签 // STAFF TAG
               </label>
@@ -72,10 +226,10 @@
             </div>
 
             <!-- Alarm Reminder Selection (Capsule Button Grid) -->
-            <div>
+            <div v-if="exportForm.exportScope === 'single' || exportForm.alarmScope !== 'none'">
               <label class="block text-white font-bold mb-2 flex items-center gap-1.5 font-sans">
                 <Bell class="w-3.5 h-3.5 text-[#E8F624]" />
-                <span>闹钟提醒参数 // VALARM PRESET</span>
+                <span>闹钟提前提醒时序 // VALARM PRESET</span>
               </label>
               <div class="grid grid-cols-3 gap-2">
                 <button
@@ -116,6 +270,22 @@
                   ]"
                 ></span>
               </button>
+            </div>
+
+            <!-- Export Summary Preview Badge -->
+            <div class="p-3 rounded-xl bg-[#111215] border border-[#2A2E35] space-y-1 text-[11px] font-tech">
+              <div class="text-[#E8F624] font-bold">
+                ✓ 导出模式: {{ exportForm.exportScope === 'all' ? `全员排班合并导出 (${staffSchedules?.length || 0} 位员工)` : `仅导出【${exportForm.selectedStaff || exportForm.staffName}】` }}
+              </div>
+              <div class="text-[#9CA3AF]">
+                ✓ 闹钟规则: 
+                <span v-if="exportForm.exportScope === 'all'">
+                  {{ exportForm.alarmScope === 'my_only' ? `仅在【${exportForm.myStaffName || '未指定本人'}】的班次开始前 ${exportForm.alarmMinutes} 分钟提醒` : (exportForm.alarmScope === 'all' ? `所有人班次均提前 ${exportForm.alarmMinutes} 分钟提醒` : '全员静默无提醒') }}
+                </span>
+                <span v-else>
+                  {{ exportForm.alarmMinutes > 0 ? `提前 ${exportForm.alarmMinutes} 分钟提醒` : '无提醒' }}
+                </span>
+              </div>
             </div>
 
             <!-- iOS Safari Import Guide Card (Ticket Stub / Technical Sheet) -->
@@ -159,7 +329,7 @@
 
 <script setup>
 import { reactive, watch } from 'vue';
-import { DownloadCloud, X, Bell, Smartphone, Download } from 'lucide-vue-next';
+import { DownloadCloud, X, Bell, Smartphone, Download, Users, User } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -173,27 +343,70 @@ const props = defineProps({
   monthInfo: {
     type: String,
     default: ''
+  },
+  staffSchedules: {
+    type: Array,
+    default: () => []
+  },
+  myStaffName: {
+    type: String,
+    default: ''
   }
 });
 
 const emit = defineEmits(['close', 'confirm-export']);
 
+const norm = (s) => (s || '').trim().toLowerCase();
+
 const exportForm = reactive({
   calendarTitle: '工作排班表',
   staffName: '',
+  selectedStaff: '',
+  myStaffName: '',
+  exportScope: 'single', // 'single' | 'all'
+  alarmScope: 'my_only',  // 'my_only' | 'all' | 'none'
   alarmMinutes: 60,
   exportOffDays: false,
 });
 
 watch(
-  () => props.staffName,
-  (val) => {
-    exportForm.staffName = val || '';
-    if (val) {
-      exportForm.calendarTitle = `工作排班 - ${val}`;
+  () => [props.isOpen, props.staffName, props.myStaffName, props.staffSchedules],
+  () => {
+    exportForm.staffName = props.staffName || '';
+    exportForm.selectedStaff = props.staffName || (props.staffSchedules?.[0]?.staffName || '');
+    exportForm.myStaffName = props.myStaffName || props.staffName || '';
+    
+    if (props.staffSchedules && props.staffSchedules.length > 1) {
+      exportForm.exportScope = 'all';
+      exportForm.calendarTitle = `工作排班表 (全员)`;
+      exportForm.alarmScope = 'my_only';
+    } else {
+      exportForm.exportScope = 'single';
+      exportForm.calendarTitle = props.staffName ? `工作排班 - ${props.staffName}` : '工作排班表';
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => exportForm.selectedStaff,
+  (val) => {
+    if (exportForm.exportScope === 'single' && val) {
+      exportForm.calendarTitle = `工作排班 - ${val}`;
+      exportForm.staffName = val;
+    }
+  }
+);
+
+watch(
+  () => exportForm.exportScope,
+  (scope) => {
+    if (scope === 'all') {
+      exportForm.calendarTitle = '工作排班表 (全员)';
+    } else {
+      exportForm.calendarTitle = `工作排班 - ${exportForm.selectedStaff || exportForm.staffName || '员工'}`;
+    }
+  }
 );
 
 const alarmOptions = [
@@ -206,7 +419,10 @@ const alarmOptions = [
 ];
 
 function handleExport() {
-  emit('confirm-export', { ...exportForm });
+  emit('confirm-export', {
+    ...exportForm,
+    staffSchedules: props.staffSchedules
+  });
   emit('close');
 }
 </script>
